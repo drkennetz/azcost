@@ -10,6 +10,8 @@ import (
 
 var (
 	printVersion = flag.Bool("version", false, "print version and exit")
+	resourceId   = flag.Bool("i", false, "print cost by resource id")
+	resourceType = flag.Bool("r", false, "print cost by resource type")
 )
 
 //go:embed VERSION
@@ -22,9 +24,17 @@ func main() {
 		fmt.Println(version)
 		os.Exit(0)
 	}
-
-	results := azure.RunType()
-	for _, v := range results {
-		fmt.Println(v)
+	if *resourceId {
+		results := azure.RunType("ResourceId")
+		for _, v := range results.Resources {
+			fmt.Println(v)
+		}
 	}
+	if *resourceType {
+		results := azure.RunType("ResourceType")
+		for _, v := range results.Resources {
+			fmt.Println(v)
+		}
+	}
+	os.Exit(0)
 }

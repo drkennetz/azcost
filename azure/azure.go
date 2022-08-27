@@ -11,30 +11,14 @@ import (
 	"time"
 )
 
-type costResultType struct {
-	cost         float64
-	date         time.Time
-	ResourceType string
-	Currency     string
-}
-
-type costResultId struct {
-	cost       float64
-	date       time.Time
-	ResourceId string
-	Currency   string
-}
-
-const dateFormat = "2006-01-02"
-
 var (
-	subscription = flag.String("subid", "", "subscription id, format: 00000000-0000-0000-0000-000000000000")
+	subscription = flag.String("subscriptionid", "", "subscription id, format: 00000000-0000-0000-0000-000000000000")
 	start        = flag.String("start", "", "start date of range to measure cost")
 	end          = flag.String("end", "", "end date of range to measure cost")
 )
 
-// RunType returns cost results by Azure type
-func RunType() []costResultType {
+// RunType returns cost results by either ResourceType of ResourceId
+func RunType(name string) CostResults {
 	flag.Parse()
 	if *subscription == "" {
 		log.Fatalln("A valid azure subscription which you can access is required ")
@@ -74,7 +58,7 @@ func RunType() []costResultType {
 
 	var grouping []*armcostmanagement.QueryGrouping
 	grouping = append(grouping, &armcostmanagement.QueryGrouping{
-		Name: to.StringPtr("ResourceType"),
+		Name: to.StringPtr(name),
 		Type: (*armcostmanagement.QueryColumnType)(to.StringPtr("Dimension")),
 	})
 	queryDefinition := armcostmanagement.QueryDefinition{
@@ -97,22 +81,22 @@ func RunType() []costResultType {
 		log.Fatalln(err)
 	}
 
-	var costTypeResults []costResultType
+	var costResults CostResults
 	// Parse data
 	for _, v := range results.Properties.Rows {
-		var result costResultType
+		var result CostResult
 		for i, v2 := range v {
 			switch i {
 			case 0:
 				fl, _ := v2.(float64)
-				result.cost = fl
+				result.Cost = fl
 			case 1:
 				if str, ok := v2.(string); ok {
 					date, err := time.Parse("2006-01-02T15:04:05", str)
 					if err != nil {
 						log.Fatalln(err)
 					}
-					result.date = date
+					result.Date = date.Format(dateFormat)
 				} else if str, ok := v2.(float64); ok {
 					var y int64 = int64(str)
 					timestring := strconv.Itoa(int(y))
@@ -120,19 +104,20 @@ func RunType() []costResultType {
 					if err != nil {
 						log.Fatalln(err)
 					}
-					result.date = time
+					result.Date = time.Format(dateFormat)
+
 				} else {
 					panic("Unknown type")
 				}
 			case 2:
 				fl, _ := v2.(string)
-				result.ResourceType = fl
+				result.Resource = fl
 			case 3:
 				fl, _ := v2.(string)
 				result.Currency = fl
 			}
 		}
-		costTypeResults = append(costTypeResults, result)
+		costResults.Resources = append(costResults.Resources, result)
 	}
-	return costTypeResults
+	return costResults
 }
