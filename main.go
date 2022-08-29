@@ -25,13 +25,13 @@ func main() {
 		os.Exit(0)
 	}
 	if *resourceId {
-		results := azure.RunType("ResourceId")
+		results := azure.Run("ResourceId")
 		for _, v := range results.Resources {
 			fmt.Println(v)
 		}
 	}
 	if *resourceType {
-		results := azure.RunType("ResourceType")
+		results := azure.Run("ResourceType")
 		for _, v := range results.Resources {
 			fmt.Println(v)
 		}
