@@ -26,8 +26,9 @@ func main() {
 	}
 	if *resourceId {
 		results := azure.Run("ResourceId")
-		for _, v := range results.Resources {
-			fmt.Println(v)
+		parsedResults := results.ParseIdResults()
+		for _, v := range parsedResults.Results {
+			fmt.Println(v.Date, v.ParsedResource, v.Cost)
 		}
 	}
 	if *resourceType {

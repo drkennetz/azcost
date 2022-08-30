@@ -62,7 +62,7 @@ func Run(name string) CostResults {
 	var costResults CostResults
 	// Parse data
 	for _, v := range results.Properties.Rows {
-		var result CostResult
+		var result RawCostResult
 		for i, v2 := range v {
 			switch i {
 			case 0:
