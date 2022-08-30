@@ -35,11 +35,15 @@ func (results *CostResults) ParseIdResults() ParsedCostResults {
 		var parsedResult ParsedCostResult
 		parsedResult.Cost = v.Cost
 		parsedResult.Date = v.Date
-		splitResource := strings.Split(v.Resource, "/")
-		resourceType := splitResource[len(splitResource)-2]
-		resourceName := strings.Split(splitResource[len(splitResource)-1], "-")[0]
-		parsedResult.ParsedResource = strings.Join([]string{resourceType, resourceName}, "/")
-		parsedResults.Results = append(parsedResults.Results, parsedResult)
+		if strings.Contains(v.Resource, "reservation") {
+			parsedResult.ParsedResource = "reservations/reservations"
+		} else {
+			splitResource := strings.Split(v.Resource, "/")
+			resourceType := splitResource[len(splitResource)-2]
+			resourceName := strings.Split(splitResource[len(splitResource)-1], "-")[0]
+			parsedResult.ParsedResource = strings.Join([]string{resourceType, resourceName}, "/")
+			parsedResults.Results = append(parsedResults.Results, parsedResult)
+		}
 	}
 	return parsedResults
 }
