@@ -5,13 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"github.com/drkennetz/azcost/azure"
+	"log"
 	"os"
 )
 
 var (
 	printVersion = flag.Bool("version", false, "print version and exit")
-	resourceId   = flag.Bool("i", false, "print cost by resource id")
-	resourceType = flag.Bool("r", false, "print cost by resource type")
+	start        = flag.String("start", "", "start date of range to measure cost")
+	end          = flag.String("end", "", "end date of range to measure cost")
 )
 
 //go:embed VERSION
@@ -24,21 +25,17 @@ func main() {
 		fmt.Println(version)
 		os.Exit(0)
 	}
-	if *resourceId {
-		results := azure.Run("ResourceId")
-		for _, v := range results.Resources {
-			fmt.Println(v)
-		}
-		/*parsedResults := results.ParseIdResults()
-		for _, v := range parsedResults.Results {
-			fmt.Println(v.Date, v.ParsedResource, v.Cost)
-		}*/
+
+	if *start == "" {
+		log.Fatalln("Please include start date with format YYYY-MM-DD")
 	}
-	if *resourceType {
-		results := azure.Run("ResourceType")
-		for _, v := range results.Resources {
-			fmt.Println(v)
-		}
+	if *end == "" {
+		log.Fatalln("Please include end date with format YYYY-MM-DD")
+	}
+	results := azure.Run(*start, *end)
+	parsedResults := results.ParseIdResults()
+	for _, v := range parsedResults.Results {
+		fmt.Println(v.Date, v.Cost, v.ParsedResourceGroup, v.ParsedResourceType, v.ParsedResourceId)
 	}
 	os.Exit(0)
 }

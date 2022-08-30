@@ -6,10 +6,12 @@ import (
 
 // CostResult holds the result of
 type RawCostResult struct {
-	Cost     float64
-	Date     string
-	Resource string
-	Currency string
+	Cost          float64
+	Date          string
+	ResourceId    string
+	ResourceType  string
+	ResourceGroup string
+	Currency      string
 }
 
 type CostResults struct {
@@ -17,9 +19,11 @@ type CostResults struct {
 }
 
 type ParsedCostResult struct {
-	Cost           float64
-	Date           string
-	ParsedResource string
+	Cost                float64
+	Date                string
+	ParsedResourceId    string
+	ParsedResourceType  string
+	ParsedResourceGroup string
 }
 
 type ParsedCostResults struct {
@@ -35,15 +39,24 @@ func (results *CostResults) ParseIdResults() ParsedCostResults {
 		var parsedResult ParsedCostResult
 		parsedResult.Cost = v.Cost
 		parsedResult.Date = v.Date
-		if strings.Contains(v.Resource, "reservation") {
-			parsedResult.ParsedResource = "reservations/reservations"
-		} else {
-			splitResource := strings.Split(v.Resource, "/")
-			resourceType := splitResource[len(splitResource)-2]
-			resourceName := strings.Split(splitResource[len(splitResource)-1], "-")[0]
-			parsedResult.ParsedResource = strings.Join([]string{resourceType, resourceName}, "/")
-			parsedResults.Results = append(parsedResults.Results, parsedResult)
+		parsedResult.ParsedResourceGroup = v.ResourceGroup
+		parsedResult.ParsedResourceType = v.ResourceType
+		parsedResult.ParsedResourceId = v.ResourceId
+
+		if parsedResult.ParsedResourceGroup == "" {
+			parsedResult.ParsedResourceGroup = "MicrosoftInternal"
 		}
+		if parsedResult.ParsedResourceType == "" {
+			parsedResult.ParsedResourceType = "reservations"
+		}
+		tmpId := strings.Split(parsedResult.ParsedResourceId, "/")
+		lastIndex := len(tmpId) - 1
+		if tmpId[lastIndex] == "" {
+			parsedResult.ParsedResourceId = tmpId[lastIndex-1]
+		} else {
+			parsedResult.ParsedResourceId = tmpId[lastIndex]
+		}
+		parsedResults.Results = append(parsedResults.Results, parsedResult)
 	}
 	return parsedResults
 }

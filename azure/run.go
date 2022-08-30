@@ -12,12 +12,10 @@ import (
 
 var (
 	subscription = flag.String("subscriptionid", "", "subscription id, format: 00000000-0000-0000-0000-000000000000")
-	start        = flag.String("start", "", "start date of range to measure cost")
-	end          = flag.String("end", "", "end date of range to measure cost")
 )
 
 // Run returns cost results for a given time range
-func Run(name string) CostResults {
+func Run(start, end string) CostResults {
 	flag.Parse()
 	if *subscription == "" {
 		log.Fatalln("A valid azure subscription which you can access is required ")
@@ -26,19 +24,12 @@ func Run(name string) CostResults {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if *start == "" {
-		// set to yesterday
-		*start = time.Now().AddDate(0, 0, -1).Format(dateFormat)
-	}
-	if *end == "" {
-		// set to today
-		*end = time.Now().Format(dateFormat)
-	}
-	begin, err := time.Parse(dateFormat, *start)
+
+	begin, err := time.Parse(dateFormat, start)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	stop, err := time.Parse(dateFormat, *end)
+	stop, err := time.Parse(dateFormat, end)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -51,8 +42,10 @@ func Run(name string) CostResults {
 	sum := NewQueryAggregation("Sum", "Cost")
 	aggregation["totalCost"] = &sum
 	var grouping []*armcostmanagement.QueryGrouping
-	newGrouping := NewQueryGrouping(name, "Dimension")
-	grouping = append(grouping, &newGrouping)
+	newGroupingId := NewQueryGrouping(QueryGroupingResourceId, "Dimension")
+	newGroupingType := NewQueryGrouping(QueryGroupingResourceType, "Dimension")
+	NewGroupingGroup := NewQueryGrouping(QueryGroupingResourceGroup, "Dimension")
+	grouping = append(grouping, &newGroupingId, &newGroupingType, &NewGroupingGroup)
 	newQueryDefinition := NewQueryDefinition("ActualCost", "Custom", "daily", aggregation, grouping, begin, stop)
 	subscriptionId := "/subscriptions/" + *subscription
 	results, err := costClient.Usage(context.Background(), subscriptionId, newQueryDefinition, nil)
@@ -85,12 +78,18 @@ func Run(name string) CostResults {
 					result.Date = time.Format(dateFormat)
 
 				} else {
-					panic("Unknown type")
+					log.Fatalln("Unknown type")
 				}
 			case 2:
 				fl, _ := v2.(string)
-				result.Resource = fl
+				result.ResourceId = fl
 			case 3:
+				fl, _ := v2.(string)
+				result.ResourceType = fl
+			case 4:
+				fl, _ := v2.(string)
+				result.ResourceGroup = fl
+			case 5:
 				fl, _ := v2.(string)
 				result.Currency = fl
 			}
