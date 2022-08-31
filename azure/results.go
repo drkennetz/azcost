@@ -5,29 +5,6 @@ import (
 	"strings"
 )
 
-type RawCostResultNoId struct {
-	Cost          float64
-	Date          string
-	ResourceType  string
-	ResourceGroup string
-	Currency      string
-}
-
-type CostResultsNoId struct {
-	Resources []RawCostResultNoId
-}
-
-type ParsedCostResultNoId struct {
-	Cost                float64
-	Date                string
-	ParsedResourceType  string
-	ParsedResourceGroup string
-}
-
-type ParsedCostResultsNoId struct {
-	Results []ParsedCostResultNoId
-}
-
 type RawCostResult struct {
 	Cost          float64
 	Date          string
@@ -84,7 +61,7 @@ func (results *CostResults) ParseIdResults() ParsedCostResults {
 	return parsedResults
 }
 
-// ParseIdResults parses the results of resourceId query and begins grouping
+// ParseNoIdResults parses the results of resourceId query and begins grouping
 func (results *CostResultsNoId) ParseNoIdResults() ParsedCostResultsNoId {
 	var parsedResults ParsedCostResultsNoId
 	for _, v := range results.Resources {
@@ -112,18 +89,14 @@ type GroupBy struct {
 func (results *ParsedCostResultsNoId) GroupByRg() GroupBy {
 	var gb GroupBy
 	gb.Gb = make(map[string]map[string]float64)
-	var totalCost float64
 	for _, v := range results.Results {
 		if _, ok := gb.Gb[v.ParsedResourceGroup]; ok {
 			gb.Gb[v.ParsedResourceGroup][v.ParsedResourceType] += v.Cost
-			totalCost += v.Cost
 		} else {
 			gb.Gb[v.ParsedResourceGroup] = make(map[string]float64)
 			gb.Gb[v.ParsedResourceGroup][v.ParsedResourceType] += v.Cost
-			totalCost += v.Cost
 		}
 	}
-	fmt.Println("total cost in gb: ", totalCost)
 	return gb
 }
 

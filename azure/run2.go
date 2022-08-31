@@ -2,7 +2,6 @@ package azure
 
 import (
 	"context"
-	"flag"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/costmanagement/armcostmanagement"
 	"log"
@@ -10,16 +9,31 @@ import (
 	"time"
 )
 
-var (
-	subscription2 = flag.String("s2", "", "subscription id, format: 00000000-0000-0000-0000-000000000000")
-)
+type RawCostResultNoId struct {
+	Cost          float64
+	Date          string
+	ResourceType  string
+	ResourceGroup string
+	Currency      string
+}
+
+type CostResultsNoId struct {
+	Resources []RawCostResultNoId
+}
+
+type ParsedCostResultNoId struct {
+	Cost                float64
+	Date                string
+	ParsedResourceType  string
+	ParsedResourceGroup string
+}
+
+type ParsedCostResultsNoId struct {
+	Results []ParsedCostResultNoId
+}
 
 // Run2 returns cost results for a given time range
-func Run2(start, end string) CostResultsNoId {
-	flag.Parse()
-	if *subscription2 == "" {
-		log.Fatalln("A valid azure subscription which you can access is required ")
-	}
+func Run2(start, end, subscriptionid string, grouping []*armcostmanagement.QueryGrouping) CostResultsNoId {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -41,12 +55,8 @@ func Run2(start, end string) CostResultsNoId {
 	aggregation := make(map[string]*armcostmanagement.QueryAggregation)
 	sum := NewQueryAggregation("Sum", "Cost")
 	aggregation["totalCost"] = &sum
-	var grouping []*armcostmanagement.QueryGrouping
-	newGroupingType := NewQueryGrouping(QueryGroupingResourceType, "Dimension")
-	newGroupingGroup := NewQueryGrouping(QueryGroupingResourceGroup, "Dimension")
-	grouping = append(grouping, &newGroupingType, &newGroupingGroup)
 	newQueryDefinition := NewQueryDefinition("ActualCost", "Custom", "daily", aggregation, grouping, begin, stop)
-	subscriptionId := "/subscriptions/" + *subscription2
+	subscriptionId := "/subscriptions/" + subscriptionid
 	results, err := costClient.Usage(context.Background(), subscriptionId, newQueryDefinition, nil)
 	if err != nil {
 		log.Fatalln(err)

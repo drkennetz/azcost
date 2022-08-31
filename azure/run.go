@@ -2,7 +2,6 @@ package azure
 
 import (
 	"context"
-	"flag"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/costmanagement/armcostmanagement"
 	"log"
@@ -10,16 +9,9 @@ import (
 	"time"
 )
 
-var (
-	subscription = flag.String("subscriptionid", "", "subscription id, format: 00000000-0000-0000-0000-000000000000")
-)
-
 // Run returns cost results for a given time range
-func Run(start, end string) CostResults {
-	flag.Parse()
-	if *subscription == "" {
-		log.Fatalln("A valid azure subscription which you can access is required ")
-	}
+func Run(start, end, subscriptionid string, grouping []*armcostmanagement.QueryGrouping) CostResults {
+
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -41,13 +33,8 @@ func Run(start, end string) CostResults {
 	aggregation := make(map[string]*armcostmanagement.QueryAggregation)
 	sum := NewQueryAggregation("Sum", "Cost")
 	aggregation["totalCost"] = &sum
-	var grouping []*armcostmanagement.QueryGrouping
-	newGroupingId := NewQueryGrouping(QueryGroupingResourceId, "Dimension")
-	newGroupingType := NewQueryGrouping(QueryGroupingResourceType, "Dimension")
-	NewGroupingGroup := NewQueryGrouping(QueryGroupingResourceGroup, "Dimension")
-	grouping = append(grouping, &newGroupingId, &newGroupingType, &NewGroupingGroup)
 	newQueryDefinition := NewQueryDefinition("ActualCost", "Custom", "daily", aggregation, grouping, begin, stop)
-	subscriptionId := "/subscriptions/" + *subscription
+	subscriptionId := "/subscriptions/" + subscriptionid
 	results, err := costClient.Usage(context.Background(), subscriptionId, newQueryDefinition, nil)
 	if err != nil {
 		log.Fatalln(err)
