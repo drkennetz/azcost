@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/drkennetz/azcost/azure"
+	"github.com/drkennetz/azcost/utils"
 	"log"
 	"os"
 )
@@ -16,6 +17,7 @@ var (
 	end          = flag.String("end", "", "end date of range to measure cost")
 	r1           = flag.Bool("r1", false, "aggregate by resourceId")
 	r2           = flag.Bool("r2", false, "aggregate by resourceType")
+	fn           = flag.String("f", "", "filename of results - if not included will be <start>.<end>.csv")
 )
 
 //go:embed VERSION
@@ -38,6 +40,9 @@ func main() {
 	if *end == "" {
 		log.Fatalln("Please include end date with format YYYY-MM-DD")
 	}
+	if *fn == "" {
+		*fn = fmt.Sprintf("%s.%s.csv", *start, *end)
+	}
 	if *r1 {
 		grouping := azure.NewResourceIdTypeGroupGrouping("Dimension")
 		results := azure.Run(*start, *end, *subscription, grouping)
@@ -57,6 +62,7 @@ func main() {
 		gb := parsedResults.GroupByRg()
 		gb.PrettyPrint()
 		fmt.Println("Total cost of resources for time period", *start, *end, ":", totalCostResource)
+		utils.WriteCSV(*fn, gb)
 	}
 	os.Exit(0)
 }
