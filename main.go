@@ -44,12 +44,23 @@ func main() {
 		*fn = fmt.Sprintf("%s.%s.csv", *start, *end)
 	}
 	if *r1 {
+		var nextLink string
+		var allResults azure.ParsedCostResults
 		grouping := azure.NewResourceIdTypeGroupGrouping("Dimension")
-		results := azure.Run(*start, *end, *subscription, grouping)
-		parsedResults := results.ParseIdResults()
-		for _, v := range parsedResults.Results {
-			fmt.Println(v.Date, v.Cost, v.ParsedResourceGroup, v.ParsedResourceType, v.ParsedResourceId)
+		initResults, nextLink := azure.Run(*start, *end, *subscription, nextLink, grouping)
+		parsedResults := initResults.ParseIdResults()
+		allResults.Results = append(allResults.Results, parsedResults.Results...)
+		for nextLink != "" {
+			tmpResults, tmpLink := azure.Run(*start, *end, *subscription, nextLink, grouping)
+			parsedResults = tmpResults.ParseIdResults()
+			allResults.Results = append(allResults.Results, parsedResults.Results...)
+			nextLink = tmpLink
 		}
+		var totalCost float64
+		for _, v := range allResults.Results {
+			totalCost += v.Cost
+		}
+		fmt.Println("total cost: ", totalCost)
 	}
 	if *r2 {
 		grouping := azure.NewResourceTypeGroupGrouping("Dimension")

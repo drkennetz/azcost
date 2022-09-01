@@ -2,16 +2,22 @@ package azure
 
 import (
 	"context"
+	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/costmanagement/armcostmanagement"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // Run returns cost results for a given time range
-func Run(start, end, subscriptionid string, grouping []*armcostmanagement.QueryGrouping) CostResults {
+func Run(start, end, subscriptionid, nextLink string, grouping []*armcostmanagement.QueryGrouping) (CostResults, string) {
 
+	var options armcostmanagement.QueryClientUsageOptions
+	if nextLink != "" {
+		options.Skiptoken = &nextLink
+	}
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -35,10 +41,19 @@ func Run(start, end, subscriptionid string, grouping []*armcostmanagement.QueryG
 	aggregation["totalCost"] = &sum
 	newQueryDefinition := NewQueryDefinition("ActualCost", "Custom", "daily", aggregation, grouping, begin, stop)
 	subscriptionId := "/subscriptions/" + subscriptionid
-	results, err := costClient.Usage(context.Background(), subscriptionId, newQueryDefinition, nil)
+	results, err := costClient.Usage(context.Background(), subscriptionId, newQueryDefinition, &options)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	var resNextLinkKey string
+	if *results.Properties.NextLink != "" {
+		resNextLinkKey = strings.Split(*results.Properties.NextLink, "$skiptoken=")[1]
+		// API version was added after, rather than before skip token
+		if strings.Contains(resNextLinkKey, "&") {
+			resNextLinkKey = strings.Split(resNextLinkKey, "&")[0]
+		}
+	}
+	fmt.Println(resNextLinkKey)
 	var costResults CostResults
 	// Parse data
 	for _, v := range results.Properties.Rows {
@@ -83,5 +98,5 @@ func Run(start, end, subscriptionid string, grouping []*armcostmanagement.QueryG
 		}
 		costResults.Resources = append(costResults.Resources, result)
 	}
-	return costResults
+	return costResults, resNextLinkKey
 }
